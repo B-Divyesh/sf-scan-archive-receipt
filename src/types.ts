@@ -21,6 +21,7 @@ export interface Batch {
   physicalSource: string;
   filenamePrefix: string;
   customPattern: string;
+  defaultSource: string;
   defaultDate: string;
   defaultRights: string;
   notes: string;
