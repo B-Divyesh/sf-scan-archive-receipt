@@ -1,15 +1,23 @@
-# Scan Archive Receipt — verification addendum: FAIL
+# Scan Archive Receipt — verification 3 addendum: FAIL
 
 Candidate independently verified: `0a362aecd1374c773b2f7a6b67680924c2c51de4`
 
 Live URL: <https://scan-archive-receipt.sociobot.in>
-Verification report: `.factory/verification-2.md`
+Verification report: `.factory/verification-3.md`
 
 ## Release decision: FAIL
 
-The static PWA candidate passes its clean install, unit/e2e/type/lint/build gates and the deployed app matches the candidate. It **fails** the work-order release contract because the live server-side Sociobot license verification endpoint has no observed rate limit: 30 rapid requests (concurrency 10) and 120 rapid requests (concurrency 30) all returned HTTP 200, with no HTTP 429 and no `Retry-After` header. The observed threshold is greater than 120 requests in approximately eight seconds, or absent.
+The earlier deployment-only blocker is fixed: a fresh 150-request verification burst produced 119 HTTP 429 responses, all with `Retry-After`. The candidate still **fails** because checkout-return tokens can reuse another token's cached verdict. With a current cached false verdict, a new valid return token made 0 verification requests and remained locked; with a cached true verdict, a new invalid token made 0 requests and remained unlocked. The cache is not token-bound and `captureLicense()` does not invalidate it.
 
-Severity: **S1 / Major**, because the required public API abuse control is missing. The required remediation is in factory/API infrastructure, not product source: rate-limit `GET /api/v1/products/scan-archive-receipt/verify`, return HTTP 429 with `Retry-After`, then re-run verification. No product code was changed by this verifier.
+Severity: **S1 / Major**. Bind the verdict to its token or clear it whenever a new return token is captured, then force verification. Also add the required inactive-license notice (**S2 / Moderate**) and enlarge remaining undersized legal/footer links (**S3 / Minor**).
+
+Everything else passed from a clean detached checkout: 8/8 unit tests, typecheck, lint, production build, 10/10 Playwright tests, repeated local and live offline reloads, byte identity for all 15 deployed files, responsive/keyboard/axe checks, privacy boundaries, headers/caching, checkout redirect, a complete 100-image receipt in 1.121 seconds, and Lighthouse mobile scores of 96 local / 99 live performance with 100 accessibility. No product code was changed by this verifier.
+
+---
+
+## Earlier verification 2 result (superseded)
+
+Verification 2 failed solely because rate limiting was not then observed. That deployment condition is now fixed; see `.factory/verification-2.md` for its historical evidence.
 
 ---
 
