@@ -1,3 +1,18 @@
+# Scan Archive Receipt — verification addendum: FAIL
+
+Candidate independently verified: `0a362aecd1374c773b2f7a6b67680924c2c51de4`
+
+Live URL: <https://scan-archive-receipt.sociobot.in>
+Verification report: `.factory/verification-2.md`
+
+## Release decision: FAIL
+
+The static PWA candidate passes its clean install, unit/e2e/type/lint/build gates and the deployed app matches the candidate. It **fails** the work-order release contract because the live server-side Sociobot license verification endpoint has no observed rate limit: 30 rapid requests (concurrency 10) and 120 rapid requests (concurrency 30) all returned HTTP 200, with no HTTP 429 and no `Retry-After` header. The observed threshold is greater than 120 requests in approximately eight seconds, or absent.
+
+Severity: **S1 / Major**, because the required public API abuse control is missing. The required remediation is in factory/API infrastructure, not product source: rate-limit `GET /api/v1/products/scan-archive-receipt/verify`, return HTTP 429 with `Retry-After`, then re-run verification. No product code was changed by this verifier.
+
+---
+
 # Scan Archive Receipt — repair handoff
 
 - Work order: `scan-archive-receipt-repair-1`
