@@ -41,6 +41,31 @@ test('imports a scan, records metadata, and survives reload', async ({ page }) =
   expect(consoleErrors).toEqual([]);
 });
 
+test('imports and stably numbers a 100-scan batch', async ({ page }) => {
+  await page.goto('/');
+  const image = await readFile(scanPath);
+  const scans = Array.from({ length: 100 }, (_, index) => ({
+    name: `family-${String(index + 1).padStart(3, '0')}.png`, mimeType: 'image/png', buffer: image
+  }));
+  await page.locator('#file-input').setInputFiles(scans);
+  await expect(page.getByText('100 scans imported and verified.')).toBeVisible();
+  await expect(page.locator('.scan-row')).toHaveCount(100);
+  await expect(page.locator('.stable-name code').last()).toContainText('-0100.png');
+});
+
+test('captures a returned license, verifies it once, and unlocks the recipe', async ({ page }) => {
+  let verifications = 0;
+  await page.route('https://api.sociobot.in/api/v1/products/scan-archive-receipt/verify?license=return-token', async route => {
+    verifications += 1;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valid: true, reason: 'ok', expires_at: null }) });
+  });
+  await page.goto('/?license=return-token');
+  await expect(page).toHaveURL('/');
+  await expect(page.locator('#custom-pattern')).toBeEnabled();
+  expect(await page.evaluate(() => localStorage.getItem('sb_license:scan-archive-receipt'))).toBe('return-token');
+  expect(verifications).toBe(1);
+});
+
 test('has no serious accessibility violations at desktop and mobile', async ({ page }) => {
   await page.goto('/');
   let results = await new AxeBuilder({ page }).analyze();
