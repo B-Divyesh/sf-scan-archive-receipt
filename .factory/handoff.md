@@ -1,67 +1,82 @@
-# Scan Archive Receipt — verification handoff
+# Scan Archive Receipt — repair handoff
 
-## Verification result: FAIL
+- Work order: `scan-archive-receipt-repair-1`
+- Repaired from verifier report: `7e0938f604f09f5f447d6f8b95506f3f67544666`
+- Failed candidate: `c4d247e8abe23887965f9324fb8bf2c75e05b73c`
+- Deploy class: static offline PWA
+- Live URL: <https://scan-archive-receipt.sociobot.in>
 
-Independent verification completed 2026-08-28 against candidate `c4d247e8abe23887965f9324fb8bf2c75e05b73c` and <https://scan-archive-receipt.sociobot.in>. The live deployment matches all 15 files in the candidate `dist/` byte-for-byte, but the acceptance contract is not met.
+## Outcome
 
-Release blockers:
+All five release-blocking findings were reproduced and repaired without changing the researched job-to-be-done, artifact class, visual thesis, free exports, or license-return behavior.
 
-- Live Sociobot checkout returns HTTP 404: `{"error":"enabled factory product","status":404}`.
-- A minimally malformed backup is saved before validation completes and leaves the app persistently blank on reload.
-- A populated scan row makes the 390 px page 633 px wide and hides the mobile editor offscreen.
-- Fresh `npm run test:e2e` failed the offline reload test (2 passed, 1 failed); repeated diagnostics failed 5/8 clean local contexts despite the app declaring its cache ready. Live repetition passed 5/5.
-- Restoring a backup over a project leaves the prior IndexedDB record; after “Clear batch,” the private scan reappears on reload.
+- Registered and enabled `Scan Archive Receipt Plus` as a live $12 USD one-time digital product in the existing Sociobot billing engine. The product URL now returns HTTP 303 to the hosted `checkout.dodopayments.com/session/...` checkout. No provider code or secret was added to this repository.
+- Added complete project/scan schema, timestamp, checksum, order, duplicate-ID, base64 data-URL, decoded-blob, and byte-size validation. Restore now decodes and validates everything before changing app state or IndexedDB. The verifier's exact `{"id":"looks-valid","items":[]}` payload leaves the active batch untouched, and legacy malformed records are ignored on launch.
+- Made restore an atomic clear-and-put transaction and made “Clear batch” clear the entire batches store. A restore-over-existing/clear/reload regression confirms the IndexedDB count goes `1 → 1 → 0` and no private copy returns.
+- Added explicit min-width containment for scan list/grid descendants and safe wrapping for checksums/actions. A populated 390×844 browser regression now reports `innerWidth = document.scrollWidth = body.scrollWidth = 390` with the row and editor inside the viewport.
+- Rebuilt the service worker around a versioned `scan-receipt-shell-v3` cache. Installation precaches and verifies the complete shell, fetches cache entries by stable pathname, and answers the app's offline-readiness handshake itself. Navigation/assets are cache-first with background navigation refresh. The update toast still appears for a newly installed worker.
+- Made the restore file control's full 44 px surface focusable with a visible 3 px amber focus ring; enlarged brand, legal links, and checksum summary targets to 44 px.
+- Added Azure Static Web Apps response policy: CSP with `frame-ancestors 'none'`, Permissions-Policy, X-Frame-Options, existing nosniff/referrer policy, correct manifest MIME, immutable one-year caching for hashed JS/CSS, and no-store for `sw.js`.
+- Removed the delayed-save status race and upgraded Vite/Vitest to non-advisory versions. Added explicit TypeScript and ESLint gates.
 
-The free 100-image happy path, exports, checksums, persistence, live identity, manifest/installability, update toast, axe serious/critical scan, basic page verification, bundle budgets, and Lighthouse thresholds otherwise passed. Full evidence, severities, exact commands, metrics, and required fixes are in [`.factory/verification.md`](verification.md).
+## Exact regression coverage
 
-No product code was modified by the verifier. Only this handoff and the verification report were changed.
+`src/backup.test.ts` covers valid embedded-byte decoding, the verifier's minimally malformed backup, incomplete item fields, byte-size mismatch, and stored-batch validation.
 
----
+`tests/app.spec.ts` covers:
 
-## Original builder handoff
+- real import, metadata persistence, checksum, stable name, CSV and HTML exports;
+- 100-image import and four-digit `-0100.png` numbering;
+- returned-license storage, URL stripping, one verification call, and recipe unlock;
+- populated desktop/mobile axe checks and exact 390 px containment;
+- malformed restore preserving the current project across reload;
+- safe launch with a legacy malformed IndexedDB record;
+- restore replacement and complete clear verified by IndexedDB record count and reload;
+- visible 44 px keyboard targets;
+- immediate offline reload; and
+- update-available toast for a newly installed worker.
 
-Work order: `scan-archive-receipt-build-1`  
-Completed: 2026-08-28  
-Deploy type: static PWA; build output is `dist/`
+## Verification evidence
 
-## What was built
-
-- A complete local-first batch workbench for image imports, physical source metadata, per-item source/page/date/rights/notes, scan order, stable filenames, and SHA-256 checksums.
-- Fast batch defaults: imported scans inherit physical source, sequential page/position, “Undated,” and a descriptive rights placeholder; users can fill blank fields across an existing batch without overwriting edits.
-- IndexedDB persistence of project metadata and original image copies. Refresh, tab close, installation, and offline use retain the active project. The app never edits originals and does not extract EXIF.
-- UTF-8 BOM CSV receipts, self-contained HTML contact sheets with reduced previews, and JSON project backup/restore with original bytes included.
-- Hand-written versioned service worker, install manifest, offline fallback, cache warming for Vite’s hashed shell assets, update toast, 192/512 icons, and an explicit offline status.
-- $12 one-time Plus unlock for custom filename recipes, using only the Sociobot checkout and verification endpoints. Return tokens, daily verdict caching, background/offline behavior, and paste-to-restore are implemented. All core exports remain free.
-- `/privacy` and `/terms`, deletion confirmation, empty/error/loading/offline states, mobile layout, keyboard-visible controls, reduced-motion handling, and no runtime CDN/tracking.
-- Original `factory-image` pixel-art hero and hand-authored app icon. Prompt, review, licensing, sizes, and rationale are in `.factory/design.md` and `assets/src/`.
-
-## How to run and verify
+Run from `/work/repo`:
 
 ```sh
-npm install
+npm ci
+npm audit --omit=dev
+npm audit
 npm test
+npm run typecheck
+npm run lint
 npm run build
 npm run test:e2e
-npm run preview
+npx playwright test tests/app.spec.ts:157 --repeat-each=12 --workers=1
 ```
 
-Deployment command: `npm run build`  
-Deployment directory: `dist` (contains `index.html` at its root)
+Results on 2026-08-28 UTC:
 
-Verification completed locally against the production build:
+- Clean `npm ci`: 136 packages installed; both production-only and full audit report 0 vulnerabilities.
+- Unit: 2 files, 8/8 tests passed.
+- TypeScript: passed. ESLint: passed.
+- Production build: passed; `dist/index.html` at root. Initial JS 26,666 bytes raw / 10.07 kB gzip; CSS 12,627 bytes raw / 3.54 kB gzip; no fonts. All remain well below contract budgets.
+- Playwright: 10/10 passed in 8.5 s, including desktop, populated 390 px mobile, keyboard/focus, privacy/data deletion, license, offline, and update paths.
+- Repeated clean-context immediate-offline regression: 12/12 passed locally. Post-deploy clean-context offline reload: 5/5 passed live at 390×844.
+- Live browser QA: 0 serious/critical axe findings on populated desktop and populated 390 px mobile; `/privacy` and `/terms` also had 0 serious/critical findings. No console or page errors. Initial load contacted only `https://scan-archive-receipt.sociobot.in`.
+- Factory `verify-url.sh`, live: HTTP 200 in 644 ms; title present, `lang=en`, exactly one h1, main landmark, 0 missing image alts, 0 unlabeled buttons, 0 console/page errors.
+- Lighthouse 13.0.1 mobile, local: Performance 100, Accessibility 100, Best Practices 100, SEO 100; FCP 0.9 s, LCP 1.1 s, TBT 0 ms, CLS 0.
+- Lighthouse 13.0.1 mobile, live: Performance 100, Accessibility 100, Best Practices 100, SEO 100; FCP 0.9 s, LCP 1.0 s, TBT 0 ms, CLS 0, total transfer 62 KiB.
+- Live response policy: CSP, Permissions-Policy, X-Frame-Options DENY, nosniff, and strict-origin referrer policy present. Hashed JS/CSS return `public, max-age=31536000, immutable`; `sw.js` returns `no-cache, no-store, must-revalidate`; the manifest is `application/manifest+json`.
+- Live identity: all 15 deployed product files (excluding deployment-only `staticwebapp.config.json`) are byte-for-byte identical to the fresh local `dist/` by SHA-256.
+- Live billing: three consecutive product checkout requests returned HTTP 303 to hosted Dodo checkout sessions. The invalid-license verification endpoint remains operational, and the browser regression proves return-token capture/strip/verify/unlock.
 
-- `npm test`: 5/5 unit tests passed (stable naming and interoperable CSV escaping/encoding).
-- `npm run test:e2e`: 3/3 Playwright tests passed (real image import/hash, IndexedDB persistence, CSV and HTML downloads, desktop/mobile axe scan, console check, and browser-level offline reload).
-- Factory `verify-url.sh`: HTTP 200; title and `lang` present; exactly one h1; main landmark present; 0 missing image alts; 0 unlabeled buttons; 0 console/page errors.
-- Lighthouse 12.8.2, mobile default profile: Performance 100, Accessibility 100, Best Practices 100, SEO 100; FCP 0.9 s, LCP 1.1 s, TBT 0 ms, CLS 0.
-- Production bundle: 24.76 KB raw / 9.44 KB gzip JS; 11.78 KB raw / 3.34 KB gzip CSS. No fonts. Responsive hero WebP is 12/44/84 KB with a 64 KB JPEG fallback.
-- `npm audit --omit=dev`: 0 production vulnerabilities.
-- 1440 px and 390 px screenshots were reviewed; mobile body width equals viewport width (no horizontal overflow).
+Deployment used the work-order configuration:
 
-## Known gaps and deployment notes
+```sh
+npm ci && npm test && npm run build
+/opt/fleet/lib/deploy-static.sh scan-archive-receipt /work/repo/dist
+```
 
-- TIFF and HEIC files are accepted and checksummed, but previews depend on the browser’s decoder. Unsupported previews are explicitly labeled; receipts and checksums still work.
-- Browser storage quota varies by device and private-browsing mode. Very large projects should be split into album-sized batches and backed up through the project export.
-- JSON backup and HTML contact-sheet creation are intentionally client-side; exceptionally large batches may take time and use significant memory.
-- The factory must register the live paid product/price and return URL with Sociobot. No product identifier or payment provider is embedded in the repository.
-- Checkout/verification cannot be fully exercised without a factory-issued test license. The no-license, cached-verdict, offline, invalid-license, and restore paths are implemented defensively.
+## Known limitations / next steps
+
+- No live card was charged during QA. Checkout creation/redirect is proven live; return-token behavior is deterministically covered with the Sociobot verification response stub so testing does not create a real purchase.
+- TIFF and HEIC import/checksum remain supported, while preview depends on browser decoding support as before.
+- Browser quota still varies; large archives should be split into album-sized batches and backed up with the JSON export.

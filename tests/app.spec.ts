@@ -164,3 +164,11 @@ test('reopens the app shell while offline', async ({ page, context }) => {
   await expect(page.locator('h1')).toContainText('Give every scan');
   await expect(page.getByText('Offline:', { exact: false })).toBeVisible();
 });
+
+test('announces a newly installed service worker update', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('html[data-offline-ready="true"]');
+  await page.evaluate(async () => { await navigator.serviceWorker.register('/sw.js?update-regression=1'); });
+  await expect(page.locator('#update-toast')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Reload' })).toBeVisible();
+});
