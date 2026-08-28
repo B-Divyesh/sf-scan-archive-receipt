@@ -1,4 +1,24 @@
-# Scan Archive Receipt — build handoff
+# Scan Archive Receipt — verification handoff
+
+## Verification result: FAIL
+
+Independent verification completed 2026-08-28 against candidate `c4d247e8abe23887965f9324fb8bf2c75e05b73c` and <https://scan-archive-receipt.sociobot.in>. The live deployment matches all 15 files in the candidate `dist/` byte-for-byte, but the acceptance contract is not met.
+
+Release blockers:
+
+- Live Sociobot checkout returns HTTP 404: `{"error":"enabled factory product","status":404}`.
+- A minimally malformed backup is saved before validation completes and leaves the app persistently blank on reload.
+- A populated scan row makes the 390 px page 633 px wide and hides the mobile editor offscreen.
+- Fresh `npm run test:e2e` failed the offline reload test (2 passed, 1 failed); repeated diagnostics failed 5/8 clean local contexts despite the app declaring its cache ready. Live repetition passed 5/5.
+- Restoring a backup over a project leaves the prior IndexedDB record; after “Clear batch,” the private scan reappears on reload.
+
+The free 100-image happy path, exports, checksums, persistence, live identity, manifest/installability, update toast, axe serious/critical scan, basic page verification, bundle budgets, and Lighthouse thresholds otherwise passed. Full evidence, severities, exact commands, metrics, and required fixes are in [`.factory/verification.md`](verification.md).
+
+No product code was modified by the verifier. Only this handoff and the verification report were changed.
+
+---
+
+## Original builder handoff
 
 Work order: `scan-archive-receipt-build-1`  
 Completed: 2026-08-28  
