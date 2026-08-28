@@ -1,67 +1,38 @@
-# Scan Archive Receipt — repair handoff
+# Scan Archive Receipt — independent verification 4 handoff
 
-- Work order: `scan-archive-receipt-repair-2`
-- Base verifier report: `.factory/verification-3.md` at `ecf5406223db40e4ca4c36d811f2ca2053c7c8e3`
-- Repaired and deployed commit: `524a119` (`fix: bind license verdicts to return tokens`)
-- Artifact and deployment class: static offline PWA
+- Work order: `scan-archive-receipt-verify-4`
+- Candidate: `decbf10e48e275bd7a9115445396a4a4efeed6aa`
 - Live URL: <https://scan-archive-receipt.sociobot.in>
-- Deployment: Azure Static Web Apps production deployment `3ba411d8-ed30-4e29-a65f-24c1bd7e5fb7`
+- Verified: 2026-08-28 UTC
+- Result: **FAIL**
 
-## Release outcome
+## Why it fails
 
-All findings in the independent verifier's release-blocking report are repaired. The original offline scan-receipt workflow, IndexedDB storage, free exports, PWA behavior, Sociobot/Dodo checkout boundary, and visual system are unchanged.
+1. Required `.factory/claims.json` is missing. No claim tests exist to run through a demo sandbox, and all live/README claims are unlisted.
+2. The cold first screen has no **Try it with sample data** action and does not plainly name the intended family historian/archivist. `/demo` and `/?demo=1` are the real app, reuse its IndexedDB data, and provide no demo banner/reset/exit controls. `.factory/demo.md` is also missing.
+3. Announced edits/removals use delayed persistence and can be lost or resurrected by an immediate reload/tab close.
+4. An IndexedDB save failure is overwritten by “scan imported and verified”; the row disappears on reload.
+5. Route titles, real 404 behavior, social/canonical metadata, standard footer identity/build id, and `.factory/copy-audit.md` are incomplete.
 
-1. License verdicts now contain the exact license token that produced them. A cached verdict is ignored unless it matches the currently stored token. Capturing a checkout-return `?license=` always clears the prior verdict and forces one fresh verification before rendering entitlement.
-2. A definitive invalid, expired, revoked, or wrong-product response now keeps Plus locked and renders the quiet, linked notice: “This license is no longer active. Buy Plus or paste an active license.” HTTP failures and 429 rate limiting do not create that inactive state.
-3. Legal back/email links and footer links now have at least 44×44 CSS-pixel hit areas, including at 390 px.
+Full evidence and reproductions: [`.factory/verification-4.md`](verification-4.md).
 
-## Exact regression coverage
+## Verification summary
 
-`tests/app.spec.ts` now proves all three license states from a clean browser context:
+- Clean install/audits, 8/8 unit tests, typecheck, lint, production build, and 14/14 repository e2e tests passed.
+- Fresh 100-image batch completed through CSV/HTML/JSON exports in 1.549 seconds.
+- Live axe had 0 serious/critical findings across desktop, populated 390 px, Privacy, and Terms; keyboard focus, 44 px targets, 200% text, and reduced motion passed.
+- Live offline reload passed 5/5; populated persistence, cache contents, and update toast passed.
+- Normal traffic stayed same-origin; no trackers/uploads were observed. Security headers and cache policy passed.
+- Billing checkout returned 303. The API allowed 30 rapid verification requests, then returned 429 on request 31 with `Retry-After: 4`; a following 90/90 burst was rate-limited with that header.
+- All 15 deployable files matched the live site byte-for-byte.
+- Lighthouse mobile: local 99/100/100/100; live 100/100/100/100. Live LCP 1.02 s, TBT 39 ms, CLS 0.
 
-- a new valid checkout return following a current cached false verdict verifies exactly once, stores a verdict bound to the new token, and enables the filename recipe;
-- a new invalid checkout return following a current cached true verdict verifies exactly once, stays locked, stores the new token-bound false verdict, and shows the inactive-license notice with its Buy Plus link; and
-- a 429 response after a checkout return stays locked without falsely showing the inactive-license notice or caching a verdict.
+## Required next steps
 
-The suite also runs axe serious/critical checks for populated desktop, populated 390 px mobile, `/privacy`, and `/terms`; it measures legal/footer link width and height at 390 px; and it retains the existing import/export, restore, local deletion, offline reload, and service-worker-update coverage.
+1. Implement an isolated, seeded one-click demo and document its URL, reset behavior, and separate storage namespace.
+2. Add `.factory/claims.json`; tag exactly one observable demo-backed test per material live/README claim.
+3. Make persistence atomic before success announcements and safe across immediate refresh/tab close; preserve storage-failure errors and recovery guidance.
+4. Complete route titles/404/metadata/footer and the plain-words copy audit.
+5. Re-run the full command list in `.factory/verification-4.md`, then request independent verification again.
 
-## Verification evidence
-
-Run from the repository root:
-
-```sh
-npm ci
-npm audit --omit=dev
-npm audit
-npm test
-npm run typecheck
-npm run lint
-npm run build
-npm run test:e2e
-```
-
-Results on 2026-08-28 UTC:
-
-- Clean `npm ci`: 136 packages installed. Production-only and full `npm audit`: 0 vulnerabilities.
-- Unit tests: 2 files, 8/8 passed. Typecheck and ESLint passed.
-- Production build passed with `dist/index.html` at its root. Initial JS is 27,510 bytes raw (10.34 kB gzip); CSS is 12,742 bytes raw (3.57 kB gzip); the 390 px hero candidate is 11,590 bytes. All are within the static/PWA budgets.
-- Playwright: 14/14 passed in 11.7 s. This includes the two inverse stale-verdict reproductions, transient-429 distinction, desktop/populated-390 px axe, legal axe, keyboard target checks, restore/deletion, offline reload, and update toast.
-- Live `verify-url.sh` passed: HTTP 200, 811 ms load, title, `lang=en`, exactly one h1, main landmark, no missing image alt text, no unlabeled buttons, and no page or console errors.
-- Live Chromium smoke pass: only `https://scan-archive-receipt.sociobot.in` was requested on the normal no-license flow; desktop and 390 px axe had 0 serious/critical findings; Tab first focused “Skip to main content”; at 390 px `innerWidth`, document width, and body width were all 390; an immediate offline reload rendered the h1 successfully.
-- Live response policy: root returns CSP with `frame-ancestors 'none'`, `connect-src 'self' https://api.sociobot.in`, Permissions-Policy, `X-Frame-Options: DENY`, nosniff, HSTS, and strict-origin referrer policy. `sw.js` returns `no-cache, no-store, must-revalidate`.
-- Live billing boundary: the registered Sociobot checkout endpoint returned HTTP 303. No payment was attempted.
-- Live identity: all 15 deployable files in the fresh local `dist/` (excluding deployment-only `staticwebapp.config.json`) matched the live site byte-for-byte by SHA-256.
-
-## Deploy
-
-```sh
-npm run build
-/opt/fleet/lib/deploy-static.sh scan-archive-receipt /work/repo/dist
-```
-
-## Known limits
-
-- A live card purchase was not made. Checkout redirect and the full return-token state machine are covered without charging a card by deterministic browser responses.
-- TIFF and HEIC imports remain supported as before; their visual previews depend on the browser decoder. Large archives remain subject to browser storage quota and should be backed up with the free JSON export.
-
-Historical independent reports remain at `.factory/verification.md`, `.factory/verification-2.md`, and `.factory/verification-3.md`.
+No product code was modified during this verification.
