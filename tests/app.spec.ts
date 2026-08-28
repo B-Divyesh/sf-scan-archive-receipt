@@ -66,6 +66,57 @@ test('captures a returned license, verifies it once, and unlocks the recipe', as
   expect(verifications).toBe(1);
 });
 
+test('verifies a valid checkout return after a cached false verdict for another token', async ({ page }) => {
+  let verifications = 0;
+  await page.addInitScript(() => {
+    localStorage.setItem('sb_license:scan-archive-receipt', 'previous-token');
+    localStorage.setItem('sb_license:scan-archive-receipt:verdict', JSON.stringify({ token: 'previous-token', valid: false, checkedAt: Date.now(), reason: 'invalid' }));
+  });
+  await page.route('https://api.sociobot.in/api/v1/products/scan-archive-receipt/verify?license=new-valid-token', async route => {
+    verifications += 1;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valid: true, reason: 'ok' }) });
+  });
+  await page.goto('/?license=new-valid-token');
+  await expect(page).toHaveURL('/');
+  await expect(page.locator('#custom-pattern')).toBeEnabled();
+  await expect(page.getByText('This license is no longer active.')).toHaveCount(0);
+  expect(verifications).toBe(1);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('sb_license:scan-archive-receipt:verdict') || '{}').token)).toBe('new-valid-token');
+});
+
+test('locks and identifies an invalid checkout return after a cached true verdict for another token', async ({ page }) => {
+  let verifications = 0;
+  await page.addInitScript(() => {
+    localStorage.setItem('sb_license:scan-archive-receipt', 'previous-token');
+    localStorage.setItem('sb_license:scan-archive-receipt:verdict', JSON.stringify({ token: 'previous-token', valid: true, checkedAt: Date.now(), reason: 'ok' }));
+  });
+  await page.route('https://api.sociobot.in/api/v1/products/scan-archive-receipt/verify?license=new-invalid-token', async route => {
+    verifications += 1;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valid: false, reason: 'invalid' }) });
+  });
+  await page.goto('/?license=new-invalid-token');
+  await expect(page).toHaveURL('/');
+  await expect(page.locator('#custom-pattern')).toBeDisabled();
+  await expect(page.getByText('This license is no longer active.')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Buy Plus' })).toBeVisible();
+  expect(verifications).toBe(1);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('sb_license:scan-archive-receipt:verdict') || '{}').token)).toBe('new-invalid-token');
+});
+
+test('does not label a temporarily unavailable license check as inactive', async ({ page }) => {
+  let verifications = 0;
+  await page.route('https://api.sociobot.in/api/v1/products/scan-archive-receipt/verify?license=retry-token', async route => {
+    verifications += 1;
+    await route.fulfill({ status: 429, headers: { 'retry-after': '1' }, body: 'Try again shortly' });
+  });
+  await page.goto('/?license=retry-token');
+  await expect(page.locator('#custom-pattern')).toBeDisabled();
+  await expect(page.getByText('This license is no longer active.')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Buy Plus' })).toBeVisible();
+  expect(verifications).toBe(1);
+  expect(await page.evaluate(() => localStorage.getItem('sb_license:scan-archive-receipt:verdict'))).toBeNull();
+});
+
 test('has no serious accessibility violations at desktop and mobile', async ({ page }) => {
   await page.goto('/');
   let results = await new AxeBuilder({ page }).analyze();
@@ -82,6 +133,11 @@ test('has no serious accessibility violations at desktop and mobile', async ({ p
   const fields = await page.locator('.scan-fields').boundingBox();
   expect(row && row.x + row.width).toBeLessThanOrEqual(390);
   expect(fields && fields.x + fields.width).toBeLessThanOrEqual(390);
+  for (const route of ['/privacy', '/terms']) {
+    await page.goto(route);
+    results = await new AxeBuilder({ page }).analyze();
+    expect(results.violations.filter(v => ['serious', 'critical'].includes(v.impact || ''))).toEqual([]);
+  }
 });
 
 test('rejects malformed restore without changing or persisting over the usable batch', async ({ page }) => {
@@ -151,6 +207,18 @@ test('restore and navigation controls expose visible 44px keyboard targets', asy
   for (const target of await page.locator('.brand, .site-header nav a, footer a').all()) {
     const box = await target.boundingBox();
     expect(box?.height).toBeGreaterThanOrEqual(44);
+  }
+});
+
+test('legal and footer links are full-size touch targets at 390px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const route of ['/privacy', '/terms']) {
+    await page.goto(route);
+    for (const target of await page.locator('.back-link, .legal p a, footer a').all()) {
+      const box = await target.boundingBox();
+      expect(box?.width).toBeGreaterThanOrEqual(44);
+      expect(box?.height).toBeGreaterThanOrEqual(44);
+    }
   }
 });
 

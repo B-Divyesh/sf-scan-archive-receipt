@@ -5,10 +5,11 @@
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}button:active{transform:none}}
 
 /* Product QA hardening: containment and keyboard-visible full-size targets. */
-.brand,.site-header nav a,footer a{min-height:44px;display:inline-flex;align-items:center}
+.brand,.site-header nav a,footer a,.back-link,.legal p a{min-width:44px;min-height:44px;display:inline-flex;align-items:center}
 .site-header nav{gap:.5rem}.site-header nav a{padding-inline:.5rem}
 .scan-list,.scan-row,.scan-fields,.row-heading>div,.stable-name,.field-grid{min-width:0;max-width:100%}
 .scan-row{width:100%}.checksum summary{min-height:44px;display:flex;align-items:center;cursor:pointer}
+.license-notice{margin:0;color:var(--amber);font-size:.85rem;line-height:1.45}
 .drop-zone,.button-like{position:relative}
 .drop-zone input,.button-like input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
 .button-like:focus-within{outline:3px solid var(--amber);outline-offset:3px}

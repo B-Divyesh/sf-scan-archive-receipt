@@ -2,7 +2,7 @@ import './style.css';
 import type { Batch, ScanItem } from './types';
 import { decodeProjectBackup } from './backup';
 import { clearAllBatches, loadLatestBatch, replaceAllBatches, saveBatch } from './db';
-import { checkoutUrl, captureLicense, getLicense, optimisticUnlock, storeLicense, verifyLicense } from './license';
+import { captureLicense, checkoutUrl, getLicense, getLicenseVerdict, optimisticUnlock, storeLicense, verifyLicense } from './license';
 import { downloadBlob, escapeHtml, formatBytes, makeCsv, sha256, slugify, stableFilename, thumbnailData } from './utils';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
@@ -13,7 +13,7 @@ let objectUrls: string[] = [];
 let saveTimer = 0;
 let statusRevision = 0;
 
-captureLicense();
+const returnedFromCheckout = captureLicense();
 paid = optimisticUnlock();
 
 const blankBatch = (): Batch => ({
@@ -57,6 +57,8 @@ function render(): void {
   if (location.pathname === '/privacy') return renderLegal('privacy');
   if (location.pathname === '/terms') return renderLegal('terms');
   if (!batch) batch = blankBatch();
+  const licenseVerdict = getLicenseVerdict();
+  const inactiveLicense = Boolean(licenseVerdict && !licenseVerdict.valid);
   const complete = batch.items.filter(completeness).length;
   const totalSize = batch.items.reduce((sum, item) => sum + item.size, 0);
   const rows = batch.items.map((item, index) => {
@@ -80,7 +82,7 @@ function render(): void {
       <section class="import-zone" aria-labelledby="import-title"><h3 id="import-title">02 / Import original scans</h3><label class="drop-zone" id="drop-zone"><input id="file-input" type="file" accept="image/*,.tif,.tiff" multiple><span class="drop-icon" aria-hidden="true">＋</span><strong>${hashing ? 'Calculating checksums…' : 'Choose scans or drop them here'}</strong><small>JPG, PNG, WebP, TIFF, HEIC; originals are read, never changed.</small></label><div class="import-meta"><span>${batch.items.length} scan${batch.items.length===1?'':'s'}</span><span>${formatBytes(totalSize)}</span><span>${complete}/${batch.items.length} complete</span></div></section></div>
       ${batch.items.length ? `<section class="defaults"><div><h3>03 / Apply batch defaults</h3><p>Fill blanks across the batch. Positions use scan order; existing details stay untouched.</p></div><label>Source item<input id="default-source" value="${escapeHtml(batch.defaultSource || batch.physicalSource)}" placeholder="Album 3"></label><label>Approximate date<input id="default-date" value="${escapeHtml(batch.defaultDate)}"></label><label>Rights note<input id="default-rights" value="${escapeHtml(batch.defaultRights)}"></label><button id="apply-defaults">Fill blank fields</button></section><section aria-labelledby="scans-title"><div class="list-head"><h3 id="scans-title">Scan order <span>${batch.items.length}</span></h3><p>Use the arrow buttons to match physical order.</p></div><ol class="scan-list">${rows}</ol></section>` : `<section class="empty-state"><span aria-hidden="true">▦</span><h3>No scans on the bench yet</h3><p>Start with one folder or album section. Files are hashed in the order your browser provides them, then you can correct that order.</p></section>`}
       <section class="export-bay" aria-labelledby="export-title"><div><p class="eyebrow">RECEIPT OUTPUT</p><h3 id="export-title">04 / Carry the context forward</h3><p>Exports are yours: a spreadsheet-ready manifest, a self-contained visual contact sheet, and a restorable project backup.</p></div><div class="export-actions"><button id="export-csv" class="primary" ${batch.items.length?'':'disabled'}>Export CSV</button><button id="export-html" ${batch.items.length?'':'disabled'}>Export contact sheet</button><button id="export-json">Back up project</button><label class="button-like">Restore project<input id="import-json" type="file" accept="application/json,.json"></label></div></section>
-      <section class="plus-panel" aria-labelledby="plus-title"><div class="plus-badge">PLUS</div><div><h3 id="plus-title">Custom archive filenames</h3><p>Use <code>{prefix}</code>, <code>{order}</code>, <code>{source}</code>, <code>{page}</code>, and <code>{date}</code>. Core receipts and every export stay free.</p><label>Filename recipe<input id="custom-pattern" value="${escapeHtml(batch.customPattern)}" ${paid?'':'disabled'}></label><p class="pattern-preview">Example: <code>${escapeHtml(stableFilename(batch, batch.items[0] || {order:1,originalName:'scan.jpg',sourceItem:'album-3',page:'12',approximateDate:'1964'} as ScanItem, true))}</code></p></div><div class="purchase"><strong>${paid?'Plus unlocked':'$12 once'}</strong>${paid?'<span>License verified on this browser.</span>':`<a class="primary button" href="${checkoutUrl}">Buy Plus</a><button id="restore-license">Have a license?</button>`}</div></section>
+      <section class="plus-panel" aria-labelledby="plus-title"><div class="plus-badge">PLUS</div><div><h3 id="plus-title">Custom archive filenames</h3><p>Use <code>{prefix}</code>, <code>{order}</code>, <code>{source}</code>, <code>{page}</code>, and <code>{date}</code>. Core receipts and every export stay free.</p><label>Filename recipe<input id="custom-pattern" value="${escapeHtml(batch.customPattern)}" ${paid?'':'disabled'}></label><p class="pattern-preview">Example: <code>${escapeHtml(stableFilename(batch, batch.items[0] || {order:1,originalName:'scan.jpg',sourceItem:'album-3',page:'12',approximateDate:'1964'} as ScanItem, true))}</code></p></div><div class="purchase"><strong>${paid?'Plus unlocked':'$12 once'}</strong>${paid?'<span>License verified on this browser.</span>': inactiveLicense ? `<p class="license-notice" role="status">This license is no longer active. <a href="${checkoutUrl}">Buy Plus</a> or paste an active license.</p><button id="restore-license">Have a license?</button>` : `<a class="primary button" href="${checkoutUrl}">Buy Plus</a><button id="restore-license">Have a license?</button>`}</div></section>
       <div class="danger-zone"><div><strong>Finished with this device?</strong><span>Clear the stored batch and all local scan copies.</span></div><button id="clear-batch" class="danger">Clear batch</button></div>
     </section></main>`);
   bindEvents(); updateOnlineState();
@@ -169,7 +171,9 @@ async function importJson(event: Event): Promise<void> {
 }
 
 async function restoreLicense(): Promise<void> {
-  const token=prompt('Paste your Scan Archive Receipt license token:'); if(!token)return;storeLicense(token);announce('Checking the license…','info');paid=await verifyLicense(true);render();announce(paid?'Plus unlocked.':'That license could not be verified. Check the token or your connection.',paid?'ok':'error');
+  const token=prompt('Paste your Scan Archive Receipt license token:'); if(!token)return;storeLicense(token);announce('Checking the license…','info');paid=await verifyLicense(true);render();
+  const inactive = Boolean(getLicenseVerdict() && !getLicenseVerdict()!.valid);
+  announce(paid ? 'Plus unlocked.' : inactive ? 'This license is no longer active. Buy Plus or paste a different license.' : 'That license could not be verified. Check your connection and try again.', paid ? 'ok' : 'error');
 }
 
 function updateOnlineState(): void { const banner=document.querySelector<HTMLElement>('#offline-banner');if(banner)banner.hidden=navigator.onLine; }
@@ -178,7 +182,7 @@ window.addEventListener('online',updateOnlineState);window.addEventListener('off
 async function start(): Promise<void> {
   try { batch=await loadLatestBatch(); } catch { batch=null; }
   render();
-  if(getLicense()){paid=await verifyLicense();updateNames();render();}
+  if(getLicense()){paid=await verifyLicense(returnedFromCheckout);updateNames();render();}
   if('serviceWorker' in navigator){const registration=await navigator.serviceWorker.register('/sw.js');if(registration.waiting)showUpdate();registration.addEventListener('updatefound',()=>registration.installing?.addEventListener('statechange',()=>{if(registration.waiting&&navigator.serviceWorker.controller)showUpdate()}));await navigator.serviceWorker.ready;await waitForController();document.documentElement.dataset.offlineReady=await workerConfirmsOfflineReady()?'true':'false';}
 }
 function showUpdate(){const toast=document.querySelector<HTMLElement>('#update-toast');if(toast){toast.hidden=false;toast.querySelector('button')?.addEventListener('click',()=>location.reload())}}
