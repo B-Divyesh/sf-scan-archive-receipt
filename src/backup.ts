@@ -41,6 +41,15 @@ function isBase64DataUrl(value: string): boolean {
   return Boolean(match && match[1].length % 4 === 0);
 }
 
+function decodeDataUrl(value: string): Blob {
+  const match = /^data:([^;,]*)(?:;[^,]*)*;base64,([a-z\d+/]*={0,2})$/i.exec(value);
+  if (!match || match[2].length % 4 !== 0) throw new Error('Invalid data URL');
+  const binary = atob(match[2]);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return new Blob([bytes], { type: match[1] || 'application/octet-stream' });
+}
+
 function parseBackup(value: unknown): ProjectBackup {
   if (!validCommonBatch(value)) throw new Error('Invalid batch');
   const ids = new Set<string>();
@@ -55,13 +64,11 @@ function parseBackup(value: unknown): ProjectBackup {
 
 export async function decodeProjectBackup(text: string): Promise<Batch> {
   const raw = parseBackup(JSON.parse(text) as unknown);
-  const items = await Promise.all(raw.items.map(async item => {
-    const response = await fetch(item.blob);
-    if (!response.ok) throw new Error('Invalid blob');
-    const blob = await response.blob();
+  const items = raw.items.map(item => {
+    const blob = decodeDataUrl(item.blob);
     if (blob.size !== item.size) throw new Error('Blob size mismatch');
     return { ...item, blob };
-  }));
+  });
   const restored: Batch = { ...raw, items };
   if (!isStoredBatch(restored)) throw new Error('Invalid restored project');
   return restored;

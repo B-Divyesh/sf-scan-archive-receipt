@@ -17,7 +17,10 @@ function validBackup() {
 
 describe('project backup validation', () => {
   it('decodes a complete backup and verifies its embedded bytes', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (() => { throw new Error('CSP blocked data URL fetch'); }) as typeof fetch;
     const batch = await decodeProjectBackup(JSON.stringify(validBackup()));
+    globalThis.fetch = originalFetch;
     expect(batch.items[0].blob).toBeInstanceOf(Blob);
     expect(batch.items[0].blob.size).toBe(5);
     expect(isStoredBatch(batch)).toBe(true);

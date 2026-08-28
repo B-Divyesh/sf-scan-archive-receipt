@@ -12,7 +12,8 @@ test('@claim:local-only core demo flow sends no scans or notes off origin', asyn
   await page.locator('.scan-row').first().getByLabel('Item notes').fill('Private family note');
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export CSV' }).click()]);
   expect(await download.path()).toBeTruthy();
-  expect(requests.every(url => new URL(url).origin === 'http://127.0.0.1:4173')).toBe(true);
+  const productOrigin = new URL(page.url()).origin;
+  expect(requests.every(url => new URL(url).origin === productOrigin)).toBe(true);
 });
 
 test('@claim:original-integrity reads original bytes without changing them or extracting EXIF', async ({ page }) => {
