@@ -23,11 +23,10 @@ test('imports a scan, records metadata, and survives reload', async ({ page }) =
   await page.goto('/');
   await expect(page.locator('h1')).toHaveCount(1);
   await page.locator('#file-input').setInputFiles(scanPath);
-  await expect(page.getByText('1 scan imported and verified.')).toBeVisible();
+  await expect(page.getByText('1 scan imported, checked, and saved.')).toBeVisible();
   const scanRow = page.locator('.scan-row');
   await scanRow.getByLabel('Source item').fill('Blue album');
   await scanRow.getByLabel('Page / position').fill('Page 4');
-  await page.waitForTimeout(500);
   await page.reload();
   await expect(page.locator('.scan-row').getByLabel('Source item')).toHaveValue('Blue album');
   await expect(page.locator('.checksum code')).not.toHaveText('Not calculated');
@@ -48,7 +47,7 @@ test('imports and stably numbers a 100-scan batch', async ({ page }) => {
     name: `family-${String(index + 1).padStart(3, '0')}.png`, mimeType: 'image/png', buffer: image
   }));
   await page.locator('#file-input').setInputFiles(scans);
-  await expect(page.getByText('100 scans imported and verified.')).toBeVisible();
+  await expect(page.getByText('100 scans imported, checked, and saved.')).toBeVisible();
   await expect(page.locator('.scan-row')).toHaveCount(100);
   await expect(page.locator('.stable-name code').last()).toContainText('-0100.png');
 });
@@ -153,7 +152,7 @@ test('rejects malformed restore without changing or persisting over the usable b
   expect(await storedBatchCount(page)).toBe(1);
   await page.reload();
   await expect(page.locator('.scan-row')).toHaveCount(1);
-  await expect(page.locator('h1')).toContainText('Give every scan');
+  await expect(page.locator('h1')).toContainText('Build a receipt');
   expect(pageErrors).toEqual([]);
 });
 
@@ -170,7 +169,7 @@ test('ignores a legacy malformed IndexedDB record on launch', async ({ page }) =
     };
   }));
   await page.reload();
-  await expect(page.locator('h1')).toContainText('Give every scan');
+  await expect(page.locator('h1')).toContainText('Build a receipt');
   await expect(page.getByText('No scans on the bench yet')).toBeVisible();
 });
 
@@ -229,7 +228,7 @@ test('reopens the app shell while offline', async ({ page, context }) => {
   await page.waitForSelector('html[data-offline-ready="true"]');
   await context.setOffline(true);
   await page.reload();
-  await expect(page.locator('h1')).toContainText('Give every scan');
+  await expect(page.locator('h1')).toContainText('Build a receipt');
   await expect(page.getByText('Offline:', { exact: false })).toBeVisible();
 });
 

@@ -1,27 +1,46 @@
 # Scan Archive Receipt
 
-Scan Archive Receipt is an offline-first PWA for family historians digitizing albums, slides, and rare originals. It turns an imported image batch into an ordered preservation receipt with physical provenance, descriptive rights notes, stable filenames, and SHA-256 checksums—without uploading or altering the originals.
+Scan Archive Receipt is an offline-first PWA for family historians. It turns image batches into ordered preservation receipts.
+
+Each receipt records source notes, stable filenames, and SHA-256 checksums. The core workflow sends no scans or notes across the network.
 
 Live product: <https://scan-archive-receipt.sociobot.in>
 
+One-click demo: <https://scan-archive-receipt.sociobot.in/demo>
+
 ## What it does
 
-- Imports image batches and calculates SHA-256 from the original bytes.
-- Records collection, physical source, item/page order, approximate date, rights, and notes.
+- Imports JPG, PNG, WebP, TIFF, and HEIC files.
+- Calculates SHA-256 from each imported file's original bytes.
+- Records collection, source, order, approximate date, rights, and notes.
 - Reorders scans and assigns stable, padded filenames.
-- Exports UTF-8 CSV, a self-contained HTML contact sheet, and a restorable JSON project.
-- Stores the active project and image copies locally in IndexedDB for offline continuity.
-- Installs as a PWA and reloads fully offline after the first visit.
-- Offers a $12 one-time Plus unlock for custom filename recipes; every core receipt and data export remains free.
+- Exports UTF-8 CSV and a self-contained HTML contact sheet.
+- Exports and restores a complete JSON project.
+- Stores real projects locally in IndexedDB for offline continuity.
+- Reloads receipts and exports offline after the first visit.
+- Deletes every local batch and scan copy through **Clear batch**.
+- Keeps core receipts and exports free. Plus costs $12 once and adds custom filename recipes.
 
-It intentionally does not perform OCR, enhancement, historical identification, cloud hosting, or legal rights analysis.
+The app reads originals without changing them. It does not extract EXIF metadata.
+
+It does not perform OCR, enhancement, identification, cloud hosting, or legal rights analysis.
+
+## Demo sandbox
+
+Open `/demo` or select **Try it with sample data**. It loads three realistic family-album records without setup.
+
+Demo changes remain in temporary memory. They never read or write the real IndexedDB batch.
+
+Use **Reset demo** to restore the sample. Use **Start for real** to discard demo changes.
+
+See [the demo record](.factory/demo.md) and [the claim registry](.factory/claims.json) for exact verification details.
 
 ## Run locally
 
 Requires Node.js 20 or newer.
 
 ```sh
-npm install
+npm ci
 npm run dev
 ```
 
@@ -37,24 +56,36 @@ npm run build
 npm run test:e2e
 ```
 
-`npm run build` is the deployment command. It creates the static site in `dist/`, with `dist/index.html` at its root. The end-to-end suite uses Playwright 1.58.2 and verifies import/persistence, schema-safe backup restore, complete local deletion, real exports, populated desktop/mobile accessibility, console output, and offline reload.
+Run every visitor-facing claim test with:
 
-To inspect the production build manually:
+```sh
+npm run test:e2e -- --grep @claim:
+```
+
+The production command creates `dist/index.html`. The browser suite uses Playwright 1.58.2.
+
+To inspect the production build:
 
 ```sh
 npm run preview
 ```
 
-## Data and privacy
+## Data, payment, and deployment
 
-No scan or descriptive metadata is sent to this product’s servers. Imported image copies are saved in the browser solely so the batch survives refresh and works offline. EXIF is not extracted. “Clear batch” deletes every locally retained batch record and scan copy from IndexedDB but never touches the original files outside the app. See `/privacy` and `/terms` in the built app.
+The real app stores imported image copies and notes in local IndexedDB. This keeps the batch available after refresh.
 
-License verification uses the Sociobot billing API. Checkout is hosted by Sociobot/Dodo; no payment provider code is embedded here. The product slug is used in the checkout URL, while registration and pricing configuration remain factory-side.
+License verification sends only the license token to the Sociobot billing API. Sociobot/Dodo hosts checkout and acts as merchant of record.
+
+The static deployment uses `public/staticwebapp.config.json`. The factory deploys `dist/`; this repository does not manage DNS or billing.
+
+See `/privacy` and `/terms` in the built app.
 
 ## Project records
 
 - [Opportunity brief](.factory/brief.json)
 - [Visual thesis and asset provenance](.factory/design.md)
+- [Demo sandbox](.factory/demo.md)
+- [Verified claims](.factory/claims.json)
 - [Build handoff](.factory/handoff.md)
 
 ## License

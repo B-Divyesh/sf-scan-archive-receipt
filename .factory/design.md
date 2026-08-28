@@ -50,6 +50,7 @@ The product is intentionally single-mode: a dark inspection-room treatment keeps
 ## Asset plan and provenance
 
 - Hero: original AI-generated pixel-art conservation workbench, used only as a conceptual illustration (not a claim about scan enhancement). Generated 2026-08-28 with the `factory-image` Azure AI Foundry deployment via `/opt/fleet/lib/gen-image.sh`; original product asset under the repository MIT license. Reviewed for anatomy, seams, text artifacts, unintended symbols, brands, and palette fit; no defects found. Shipped as 480/960/1440 px WebP (12/44/84 KB) with a 960 px JPEG fallback (64 KB).
+- Social preview: a 1200×630 center crop derived from the approved original hero. No new generated content, text, brand, or external asset was added.
 - Hand-authored SVG app icons: a scan frame around a catalog card with a checksum tick. Original to this product, 2026-08-28, MIT.
 - No third-party imagery, icon library, font, script, or CDN.
 

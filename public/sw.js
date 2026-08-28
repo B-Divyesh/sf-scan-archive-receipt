@@ -1,5 +1,5 @@
-const CACHE = 'scan-receipt-shell-v3';
-const CORE = ['/index.html', '/offline.html', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/assets/hero-480.webp', '/assets/hero-960.webp', '/assets/hero-1440.webp', '/assets/hero-960.jpg'];
+const CACHE = 'scan-receipt-shell-v4';
+const CORE = ['/index.html', '/offline.html', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png', '/assets/hero-480.webp', '/assets/hero-960.webp', '/assets/hero-1440.webp', '/assets/hero-960.jpg', '/assets/social-preview.jpg'];
 
 const cacheKey = request => {
   const url = new URL(typeof request === 'string' ? request : request.url, self.location.origin);
