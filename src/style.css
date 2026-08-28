@@ -3,3 +3,14 @@
 @media(max-width:850px){.hero{grid-template-columns:1fr;min-height:auto;padding-top:4rem}.hero-art{max-width:620px}.batch-grid,.export-bay{grid-template-columns:1fr}.defaults{grid-template-columns:1fr 1fr}.defaults>div{grid-column:1/-1}.plus-panel{grid-template-columns:auto 1fr}.purchase{grid-column:2}.section-head{align-items:start;flex-direction:column}.stepper{width:100%;overflow:auto}.scan-row{grid-template-columns:130px 1fr}.field-grid{grid-template-columns:1fr}.site-header nav{display:none}}
 @media(max-width:600px){.site-header{height:60px;padding-inline:1rem}.hero{padding:3.5rem 1rem}.hero h1{font-size:2.55rem}.hero-art{margin-top:.5rem}.workflow{padding:3.5rem 1rem}.defaults,.export-bay,.plus-panel{padding:1.2rem;margin-block:2.5rem}.defaults{grid-template-columns:1fr}.scan-row{grid-template-columns:1fr;padding:1rem}.scan-preview{min-height:180px}.scan-preview img{height:220px}.row-heading{flex-direction:column}.row-actions{width:100%}.row-actions .danger-quiet{margin-left:auto}.stable-name{grid-template-columns:1fr;gap:.2rem}.export-actions{grid-template-columns:1fr}.plus-panel{grid-template-columns:1fr}.purchase{grid-column:1}.danger-zone,footer{align-items:flex-start;flex-direction:column}.import-meta{display:grid;grid-template-columns:1fr 1fr}.drop-zone{min-height:250px}.trust-line{display:grid}.stepper li{white-space:nowrap}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}button:active{transform:none}}
+
+/* Product QA hardening: containment and keyboard-visible full-size targets. */
+.brand,.site-header nav a,footer a{min-height:44px;display:inline-flex;align-items:center}
+.site-header nav{gap:.5rem}.site-header nav a{padding-inline:.5rem}
+.scan-list,.scan-row,.scan-fields,.row-heading>div,.stable-name,.field-grid{min-width:0;max-width:100%}
+.scan-row{width:100%}.checksum summary{min-height:44px;display:flex;align-items:center;cursor:pointer}
+.drop-zone,.button-like{position:relative}
+.drop-zone input,.button-like input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.button-like:focus-within{outline:3px solid var(--amber);outline-offset:3px}
+footer{padding-bottom:max(4rem,env(safe-area-inset-bottom))}
+@media(max-width:600px){.scan-row,.scan-fields{width:100%}.checksum code{word-break:break-all}.row-actions{flex-wrap:wrap}.workflow{overflow-x:clip}}

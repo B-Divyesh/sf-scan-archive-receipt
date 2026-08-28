@@ -31,11 +31,13 @@ Open the URL printed by Vite. Browser storage belongs to that local origin.
 
 ```sh
 npm test
+npm run typecheck
+npm run lint
 npm run build
 npm run test:e2e
 ```
 
-`npm run build` is the deployment command. It creates the static site in `dist/`, with `dist/index.html` at its root. The end-to-end suite uses Playwright 1.58.2 and verifies import/persistence, real exports, desktop/mobile accessibility, console output, and offline reload.
+`npm run build` is the deployment command. It creates the static site in `dist/`, with `dist/index.html` at its root. The end-to-end suite uses Playwright 1.58.2 and verifies import/persistence, schema-safe backup restore, complete local deletion, real exports, populated desktop/mobile accessibility, console output, and offline reload.
 
 To inspect the production build manually:
 
@@ -45,7 +47,7 @@ npm run preview
 
 ## Data and privacy
 
-No scan or descriptive metadata is sent to this product’s servers. Imported image copies are saved in the browser solely so the batch survives refresh and works offline. EXIF is not extracted. “Clear batch” deletes the active project from IndexedDB but never touches the original files outside the app. See `/privacy` and `/terms` in the built app.
+No scan or descriptive metadata is sent to this product’s servers. Imported image copies are saved in the browser solely so the batch survives refresh and works offline. EXIF is not extracted. “Clear batch” deletes every locally retained batch record and scan copy from IndexedDB but never touches the original files outside the app. See `/privacy` and `/terms` in the built app.
 
 License verification uses the Sociobot billing API. Checkout is hosted by Sociobot/Dodo; no payment provider code is embedded here. The product slug is used in the checkout URL, while registration and pricing configuration remain factory-side.
 

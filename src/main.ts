@@ -1,6 +1,7 @@
 import './style.css';
 import type { Batch, ScanItem } from './types';
-import { deleteBatch, loadLatestBatch, saveBatch } from './db';
+import { decodeProjectBackup } from './backup';
+import { clearAllBatches, loadLatestBatch, replaceAllBatches, saveBatch } from './db';
 import { checkoutUrl, captureLicense, getLicense, optimisticUnlock, storeLicense, verifyLicense } from './license';
 import { downloadBlob, escapeHtml, formatBytes, makeCsv, sha256, slugify, stableFilename, thumbnailData } from './utils';
 
@@ -10,6 +11,7 @@ let hashing = false;
 let paid = false;
 let objectUrls: string[] = [];
 let saveTimer = 0;
+let statusRevision = 0;
 
 captureLicense();
 paid = optimisticUnlock();
@@ -20,6 +22,7 @@ const blankBatch = (): Batch => ({
 });
 
 const announce = (message: string, kind: 'ok'|'error'|'info' = 'ok') => {
+  statusRevision += 1;
   const status = document.querySelector<HTMLElement>('#live-status');
   if (status) { status.textContent = message; status.dataset.kind = kind; }
 };
@@ -27,8 +30,14 @@ const announce = (message: string, kind: 'ok'|'error'|'info' = 'ok') => {
 const laterSave = () => {
   if (!batch) return;
   clearTimeout(saveTimer); batch.updatedAt = new Date().toISOString();
-  saveTimer = window.setTimeout(() => saveBatch(batch!).then(() => announce('Changes saved on this device.')).catch(() => announce('Could not save. Your browser storage may be full.', 'error')), 350);
+  const revision = statusRevision;
+  saveTimer = window.setTimeout(() => {
+    const pending = batch!;
+    saveBatch(pending).then(() => { if (revision === statusRevision) announce('Changes saved on this device.'); }).catch(() => announce('Could not save. Your browser storage may be full.', 'error'));
+  }, 350);
 };
+
+const cancelPendingSave = () => { clearTimeout(saveTimer); saveTimer = 0; };
 
 function shell(content: string, legal = false): void {
   app.innerHTML = `<header class="site-header"><a class="brand" href="/" aria-label="Scan Archive Receipt home"><span class="brand-mark" aria-hidden="true">▦</span><span>SCAN / ARCHIVE / RECEIPT</span></a><nav aria-label="Primary"><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav></header>${content}<footer><p>Made for careful family archives. Your scans stay on this device.</p><p><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <span>Original AI-generated artwork disclosed in the design record.</span></p></footer><div id="update-toast" class="toast" hidden>New version ready. <button id="reload-app">Reload</button></div>`;
@@ -97,7 +106,7 @@ async function addFiles(files: File[]): Promise<void> {
   if (!batch || hashing || !files.length) return;
   const images = files.filter(file => file.type.startsWith('image/') || /\.(tif|tiff|heic)$/i.test(file.name));
   if (!images.length) return announce('No supported image files were selected.', 'error');
-  hashing = true; render(); announce(`Reading ${images.length} original${images.length===1?'':'s'} and calculating SHA-256 checksums…`, 'info');
+  cancelPendingSave(); hashing = true; render(); announce(`Reading ${images.length} original${images.length===1?'':'s'} and calculating SHA-256 checksums…`, 'info');
   try {
     for (const file of images) {
       const order = batch.items.length + 1;
@@ -130,12 +139,12 @@ function bindEvents(): void {
   document.querySelector<HTMLInputElement>('#import-json')?.addEventListener('change', importJson);
   document.querySelector<HTMLInputElement>('#custom-pattern')?.addEventListener('input', event => {batch!.customPattern=(event.target as HTMLInputElement).value;updateNames();refreshNameLabels();laterSave();});
   document.querySelector('#restore-license')?.addEventListener('click', restoreLicense);
-  document.querySelector('#clear-batch')?.addEventListener('click', async () => {if(!confirm(`Delete “${batch!.title}” and its ${batch!.items.length} locally stored scan${batch!.items.length===1?'':'s'} from this browser? Export a backup first if needed.`))return;await deleteBatch(batch!.id);batch=blankBatch();render();announce('Local batch cleared. Originals outside this app were not changed.');});
+  document.querySelector('#clear-batch')?.addEventListener('click', async () => {if(!confirm(`Delete “${batch!.title}” and its ${batch!.items.length} locally stored scan${batch!.items.length===1?'':'s'} from this browser? Export a backup first if needed.`))return;cancelPendingSave();await clearAllBatches();batch=blankBatch();render();announce('Local batch cleared. Originals outside this app were not changed.');});
 }
 
 async function exportHtml(): Promise<void> {
   announce('Building the contact sheet…', 'info');
-  const cards = await Promise.all(batch!.items.map(async item => {let image='';try{image=await thumbnailData(item.blob)}catch{}return `<article>${image?`<img src="${image}" alt="">`:'<div class="no-preview">Preview unavailable</div>'}<h2>${item.order}. ${escapeHtml(item.stableName)}</h2><dl><dt>Original</dt><dd>${escapeHtml(item.originalName)}</dd><dt>Source</dt><dd>${escapeHtml(item.sourceItem)} — ${escapeHtml(item.page)}</dd><dt>Date</dt><dd>${escapeHtml(item.approximateDate)}</dd><dt>Rights</dt><dd>${escapeHtml(item.rights)}</dd><dt>SHA-256</dt><dd><code>${item.checksum}</code></dd></dl>${item.notes?`<p>${escapeHtml(item.notes)}</p>`:''}</article>`}));
+  const cards = await Promise.all(batch!.items.map(async item => {let image='';try{image=await thumbnailData(item.blob)}catch{/* The receipt still records formats this browser cannot preview. */}return `<article>${image?`<img src="${image}" alt="">`:'<div class="no-preview">Preview unavailable</div>'}<h2>${item.order}. ${escapeHtml(item.stableName)}</h2><dl><dt>Original</dt><dd>${escapeHtml(item.originalName)}</dd><dt>Source</dt><dd>${escapeHtml(item.sourceItem)} — ${escapeHtml(item.page)}</dd><dt>Date</dt><dd>${escapeHtml(item.approximateDate)}</dd><dt>Rights</dt><dd>${escapeHtml(item.rights)}</dd><dt>SHA-256</dt><dd><code>${item.checksum}</code></dd></dl>${item.notes?`<p>${escapeHtml(item.notes)}</p>`:''}</article>`}));
   const html=`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escapeHtml(batch!.title)} — archive receipt</title><style>body{font:16px/1.5 system-ui;color:#18201d;margin:2rem auto;max-width:1200px;padding:0 1rem}header{border-bottom:4px solid #18201d;margin-bottom:2rem}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:2rem}article{break-inside:avoid;border-top:2px solid;padding-top:1rem}img,.no-preview{width:100%;aspect-ratio:3/2;object-fit:contain;background:#e8eee9}h1,h2{font-family:monospace}h2{font-size:1rem;overflow-wrap:anywhere}dl{display:grid;grid-template-columns:6rem 1fr;margin:.5rem 0}dt{font-weight:bold}dd{margin:0;overflow-wrap:anywhere}code{font-size:.7rem}@media print{body{margin:0}article{page-break-inside:avoid}}</style></head><body><header><h1>${escapeHtml(batch!.title)}</h1><p>${escapeHtml(batch!.collection)} · ${escapeHtml(batch!.physicalSource)} · ${batch!.items.length} scans</p><p>${escapeHtml(batch!.notes)}</p></header><main>${cards.join('')}</main><footer><p>Receipt created ${new Date().toISOString()} with Scan Archive Receipt. SHA-256 values describe the imported original bytes.</p></footer></body></html>`;
   downloadBlob(new Blob([html],{type:'text/html;charset=utf-8'}),`${slugify(batch!.title)}-contact-sheet.html`);announce('Self-contained HTML contact sheet exported.');
 }
@@ -147,7 +156,16 @@ async function exportJson(): Promise<void> {
 
 async function importJson(event: Event): Promise<void> {
   const file=(event.target as HTMLInputElement).files?.[0];if(!file)return;
-  try {const raw=JSON.parse(await file.text()) as Omit<Batch,'items'> & {items:(Omit<ScanItem,'blob'>&{blob:string})[]};if(!raw.id||!Array.isArray(raw.items))throw new Error();const items=await Promise.all(raw.items.map(async item=>({...item,blob:await (await fetch(item.blob)).blob()})));batch={...raw,id:crypto.randomUUID(),items,updatedAt:new Date().toISOString()};updateNames();await saveBatch(batch);render();announce(`Restored ${items.length} scans from project backup.`);} catch {announce('That file is not a valid Scan Archive Receipt project backup.','error');}
+  try {
+    const restored = await decodeProjectBackup(await file.text());
+    const replacement = { ...restored, id: crypto.randomUUID(), updatedAt: new Date().toISOString() };
+    replacement.items.forEach((item, index) => { item.order = index + 1; item.stableName = stableFilename(replacement, item, paid); });
+    cancelPendingSave();
+    await replaceAllBatches(replacement);
+    batch = replacement;
+    render();announce(`Restored ${replacement.items.length} scan${replacement.items.length===1?'':'s'} from project backup.`);
+  } catch {announce('That file is not a valid Scan Archive Receipt project backup. Your current batch was not changed.','error');}
+  (event.target as HTMLInputElement).value = '';
 }
 
 async function restoreLicense(): Promise<void> {
@@ -161,8 +179,24 @@ async function start(): Promise<void> {
   try { batch=await loadLatestBatch(); } catch { batch=null; }
   render();
   if(getLicense()){paid=await verifyLicense();updateNames();render();}
-  if('serviceWorker' in navigator){const registration=await navigator.serviceWorker.register('/sw.js');if(registration.waiting)showUpdate();registration.addEventListener('updatefound',()=>registration.installing?.addEventListener('statechange',()=>{if(registration.waiting&&navigator.serviceWorker.controller)showUpdate()}));await navigator.serviceWorker.ready;try{const urls=[...document.querySelectorAll<HTMLScriptElement>('script[src]'),...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')].map(element=>element instanceof HTMLScriptElement?element.src:element.href);const hero=document.querySelector<HTMLImageElement>('.hero-art img')?.currentSrc;if(hero)urls.push(hero);await (await caches.open('scan-receipt-shell-v2')).addAll([...new Set(urls)]);document.documentElement.dataset.offlineReady='true';}catch{document.documentElement.dataset.offlineReady='false';}}
+  if('serviceWorker' in navigator){const registration=await navigator.serviceWorker.register('/sw.js');if(registration.waiting)showUpdate();registration.addEventListener('updatefound',()=>registration.installing?.addEventListener('statechange',()=>{if(registration.waiting&&navigator.serviceWorker.controller)showUpdate()}));await navigator.serviceWorker.ready;await waitForController();document.documentElement.dataset.offlineReady=await workerConfirmsOfflineReady()?'true':'false';}
 }
 function showUpdate(){const toast=document.querySelector<HTMLElement>('#update-toast');if(toast){toast.hidden=false;toast.querySelector('button')?.addEventListener('click',()=>location.reload())}}
+
+function waitForController(): Promise<void> {
+  if (navigator.serviceWorker.controller) return Promise.resolve();
+  return new Promise(resolve => navigator.serviceWorker.addEventListener('controllerchange', () => resolve(), { once: true }));
+}
+
+function workerConfirmsOfflineReady(): Promise<boolean> {
+  return new Promise(resolve => {
+    const controller = navigator.serviceWorker.controller;
+    if (!controller) return resolve(false);
+    const channel = new MessageChannel();
+    const timeout = window.setTimeout(() => resolve(false), 5000);
+    channel.port1.onmessage = event => { clearTimeout(timeout); resolve(event.data?.type === 'OFFLINE_READY' && event.data.ready === true); };
+    controller.postMessage({ type: 'CHECK_OFFLINE_READY' }, [channel.port2]);
+  });
+}
 
 start();

@@ -1,4 +1,5 @@
 import type { Batch } from './types';
+import { isStoredBatch } from './backup';
 
 const DB_NAME = 'scan-archive-receipt';
 const STORE = 'batches';
@@ -28,13 +29,25 @@ export async function loadLatestBatch(): Promise<Batch | null> {
     request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
   });
   db.close();
-  return batches.sort((a,b) => b.updatedAt.localeCompare(a.updatedAt))[0] || null;
+  return batches.filter(isStoredBatch).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt))[0] || null;
 }
 
-export async function deleteBatch(id: string): Promise<void> {
+export async function replaceAllBatches(batch: Batch): Promise<void> {
   const db = await openDb();
   await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readwrite'); tx.objectStore(STORE).delete(id);
+    const tx = db.transaction(STORE, 'readwrite');
+    const store = tx.objectStore(STORE);
+    store.clear();
+    store.put(batch);
+    tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+export async function clearAllBatches(): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite'); tx.objectStore(STORE).clear();
     tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error);
   });
   db.close();
