@@ -34,7 +34,7 @@ Verification completed locally against the production build:
 - `npm run test:e2e`: 3/3 Playwright tests passed (real image import/hash, IndexedDB persistence, CSV and HTML downloads, desktop/mobile axe scan, console check, and browser-level offline reload).
 - Factory `verify-url.sh`: HTTP 200; title and `lang` present; exactly one h1; main landmark present; 0 missing image alts; 0 unlabeled buttons; 0 console/page errors.
 - Lighthouse 12.8.2, mobile default profile: Performance 100, Accessibility 100, Best Practices 100, SEO 100; FCP 0.9 s, LCP 1.1 s, TBT 0 ms, CLS 0.
-- Production bundle: 24.37 KB raw / 9.37 KB gzip JS; 11.78 KB raw / 3.34 KB gzip CSS. No fonts. Responsive hero WebP is 12/44/84 KB with a 64 KB JPEG fallback.
+- Production bundle: 24.76 KB raw / 9.44 KB gzip JS; 11.78 KB raw / 3.34 KB gzip CSS. No fonts. Responsive hero WebP is 12/44/84 KB with a 64 KB JPEG fallback.
 - `npm audit --omit=dev`: 0 production vulnerabilities.
 - 1440 px and 390 px screenshots were reviewed; mobile body width equals viewport width (no horizontal overflow).
 
