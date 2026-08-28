@@ -1,0 +1,9 @@
+{
+  "slug": "scan-archive-receipt",
+  "title": "Scan Archive Receipt",
+  "artifact_class": "pwa-offline",
+  "smallest_useful_product": "Offline PWA that imports a scan batch, records source item/page/order/date/rights notes, generates stable filenames and checksums, and exports a CSV plus HTML contact sheet.",
+  "success_measure": "Users can take a 100-image batch from import to a complete metadata/checksum receipt in under 20 minutes without creating a separate spreadsheet.",
+  "constraints": "Never alter originals; EXIF may be sensitive; metadata exports must be UTF-8 and interoperable; rights fields are descriptive, not legal advice.",
+  "monetization": "one-time"
+}
