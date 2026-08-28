@@ -82,6 +82,17 @@ function updateNames(): void {
   batch.items.forEach((item, i) => { item.order = i + 1; item.stableName = stableFilename(batch!, item, paid); });
 }
 
+function refreshNameLabels(): void {
+  if (!batch) return;
+  document.querySelectorAll<HTMLElement>('.scan-row').forEach(row => {
+    const item = batch!.items.find(scan => scan.id === row.dataset.id);
+    const label = row.querySelector<HTMLElement>('.stable-name code');
+    if (item && label) label.textContent = item.stableName;
+  });
+  const example = document.querySelector<HTMLElement>('.pattern-preview code');
+  if (example) example.textContent = stableFilename(batch, batch.items[0] || {order:1,originalName:'scan.jpg',sourceItem:'album-3',page:'12',approximateDate:'1964'} as ScanItem, true);
+}
+
 async function addFiles(files: File[]): Promise<void> {
   if (!batch || hashing || !files.length) return;
   const images = files.filter(file => file.type.startsWith('image/') || /\.(tif|tiff|heic)$/i.test(file.name));
@@ -101,14 +112,14 @@ async function addFiles(files: File[]): Promise<void> {
 function bindEvents(): void {
   document.querySelector<HTMLFormElement>('#batch-form')?.addEventListener('input', event => {
     const input = event.target as HTMLInputElement|HTMLTextAreaElement; if (!batch || !(input.name in batch)) return;
-    (batch as unknown as Record<string,string>)[input.name] = input.value; updateNames(); laterSave();
+    (batch as unknown as Record<string,string>)[input.name] = input.value; updateNames(); refreshNameLabels(); laterSave();
   });
   const fileInput = document.querySelector<HTMLInputElement>('#file-input'); fileInput?.addEventListener('change', () => addFiles([...fileInput.files!]))
   const drop = document.querySelector<HTMLElement>('#drop-zone');
   drop?.addEventListener('dragover', event => {event.preventDefault(); drop.classList.add('dragging')}); drop?.addEventListener('dragleave', () => drop.classList.remove('dragging')); drop?.addEventListener('drop', event => {event.preventDefault();drop.classList.remove('dragging');addFiles([...event.dataTransfer!.files])});
   document.querySelectorAll<HTMLElement>('.scan-row').forEach(row => {
     const id = row.dataset.id!; const item = batch!.items.find(scan => scan.id === id)!;
-    row.addEventListener('input', event => { const field = event.target as HTMLInputElement|HTMLTextAreaElement; if (!(field.name in item)) return; (item as unknown as Record<string,string>)[field.name]=field.value; updateNames(); laterSave(); });
+    row.addEventListener('input', event => { const field = event.target as HTMLInputElement|HTMLTextAreaElement; if (!(field.name in item)) return; (item as unknown as Record<string,string>)[field.name]=field.value; updateNames(); refreshNameLabels(); laterSave(); });
     row.querySelector('[data-remove]')?.addEventListener('click', () => { if (confirm(`Remove ${item.originalName} from this batch? The original file is not affected.`)) { batch!.items=batch!.items.filter(scan=>scan.id!==id);updateNames();laterSave();render();announce('Scan removed from the local batch.'); }});
     row.querySelectorAll<HTMLButtonElement>('[data-move]').forEach(button => button.addEventListener('click', () => {const old=batch!.items.indexOf(item), next=old+(button.dataset.move==='up'?-1:1); [batch!.items[old],batch!.items[next]]=[batch!.items[next],batch!.items[old]];updateNames();laterSave();render();announce(`${item.originalName} moved to position ${next+1}.`);}));
   });
@@ -117,7 +128,7 @@ function bindEvents(): void {
   document.querySelector('#export-html')?.addEventListener('click', exportHtml);
   document.querySelector('#export-json')?.addEventListener('click', exportJson);
   document.querySelector<HTMLInputElement>('#import-json')?.addEventListener('change', importJson);
-  document.querySelector<HTMLInputElement>('#custom-pattern')?.addEventListener('input', event => {batch!.customPattern=(event.target as HTMLInputElement).value;updateNames();laterSave();});
+  document.querySelector<HTMLInputElement>('#custom-pattern')?.addEventListener('input', event => {batch!.customPattern=(event.target as HTMLInputElement).value;updateNames();refreshNameLabels();laterSave();});
   document.querySelector('#restore-license')?.addEventListener('click', restoreLicense);
   document.querySelector('#clear-batch')?.addEventListener('click', async () => {if(!confirm(`Delete “${batch!.title}” and its ${batch!.items.length} locally stored scan${batch!.items.length===1?'':'s'} from this browser? Export a backup first if needed.`))return;await deleteBatch(batch!.id);batch=blankBatch();render();announce('Local batch cleared. Originals outside this app were not changed.');});
 }
