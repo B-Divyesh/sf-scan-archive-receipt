@@ -47,3 +47,14 @@ No product defects remain from the recorded verification history. Checkout and l
 Fresh-clone verification ran all 13 declared claim commands individually before a manual build; all passed. `npm test` passed 9/9, `npm run typecheck`, `npm run lint`, and `npm run build` passed, and local plus live browser suites passed 31/31. Live desktop and 390 px phone first screens, one-click isolated demo/reset, real-data isolation, accessibility, reduced motion, routes/legal pages/404, privacy, offline reload/update, artifact identity, checkout redirect, and rate limiting were checked.
 
 Live deployment matched 18/18 production artifacts. The license endpoint accepted 30 fresh invalid requests and returned 429 with Retry-After on request 31. Full evidence is in `.factory/verification-6.md` and copied to `/work/.evidence/qa-report.md`.
+
+## Review 1
+
+- Review report: `.factory/review-1.md`
+- Implementation candidate: `591ddd7fcdb29c281edfc9c90888ad2dd14e2532`
+- Documentation baseline: `024c24dc74575818a90c3a0b39a9ad2366c14407`
+- Result: **PASS** — zero findings and zero untested public claims.
+
+This review did not change product code. A fresh detached clone ran all 13 declared claim commands individually after `npm ci`, plus audit, unit, type, lint, build, and the 31-test browser suite. The live 31-test suite also passed. Fresh desktop and 390 px phone pages plainly showed the job, audience, and sample action. The isolated sample had three populated Nair records, its persistent label, working reset, and no effect on a real browser batch.
+
+All 18 deployable artifacts from the reviewed build matched live by SHA-256. Direct live checks passed for routes, headers, URL verifier, checkout redirect, offline/update coverage, and the license allowance of 30 requests followed by HTTP 429 with `Retry-After: 3`. The standalone Axe CLI could not launch Selenium Chrome in this container; the live Playwright Axe integration in the repository passed all required routes, so no accessibility claim is untested.
