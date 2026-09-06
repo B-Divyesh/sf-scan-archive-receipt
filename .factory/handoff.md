@@ -1,22 +1,38 @@
-# Scan Archive Receipt — verification 5 handoff
+# Scan Archive Receipt — repair 4 handoff
 
-- Work order: `scan-archive-receipt-verify-5`
-- Candidate: `9c1565671e5317bfad8144bd2ea12acb26e26341`
+- Work order: `scan-archive-receipt-repair-4`
+- Implementation SHA: `591ddd7fcdb29c281edfc9c90888ad2dd14e2532`
+- Previous verification record: `beeed9c5a0904de490effd74bdfa1ded0a96ea6f`
 - Live URL: <https://scan-archive-receipt.sociobot.in>
-- Completed: 2026-08-28 UTC
-- Result: **FAIL**
+- Released: 2026-09-06 UTC
+- Result: **PASS**
 
-## Release blocker
+## Fixed
 
-All 13 exact test commands listed in `.factory/claims.json` fail from the required clean checkout after `npm ci`, before any production build. Their Playwright configuration runs `npm run preview`, but `dist/` does not exist in a clean clone; `/demo` returns 404 and every test times out. This violates the explicit claims/demo acceptance gate even though the same tests pass after a manual `npm run build`.
+- Every declared claim command now builds the production artifact before starting Vite preview. A clean checkout no longer needs a prior `npm run build`; `/demo` is available to each claim command.
+- Added an outcome-based preflight regression. It removes `dist/`, runs the declared scope-boundaries claim command, and proves that the command produces `dist/index.html`.
+- Fixed a newly observed immediate-reload persistence race. The first edit now starts its IndexedDB write in the input event instead of waiting for a deferred Promise continuation. The immediate-refresh claim passed 10 consecutive runs after the change.
+- Added the verb-first catalog description and documented that direct claim commands work after `npm ci`.
 
-Repair the claim-test entry point so each declared command builds/provisions the demo itself, then rerun every exact command from a new clone.
+## Verification
 
-## Verified otherwise
+Fresh detached checkout at the implementation SHA:
 
-- `npm test` 8/8; typecheck; lint; exact build; local 31/31 browser suite; post-build 13/13 claims: passed.
-- Live artifact identity: 18/18 deployable files match the candidate build.
-- Live full browser suite: 31/31 passed. Demo privacy request log, offline reload, service-worker update, 390 px layout, keyboard focus, reduced motion, and axe serious/critical checks passed.
-- The billing verify API allowed 30 requests; request 31 returned 429 with `Retry-After: 2`.
+- `npm ci`; `npm audit --omit=dev`; `npm audit`: passed, 0 vulnerabilities.
+- All 13 exact commands declared in `.factory/claims.json` were run individually before a manual build: 13/13 passed.
+- `npm test`: 9/9 passed, including the clean-artifact preflight regression.
+- `npm run typecheck`, `npm run lint`, and `npm run build`: passed. Build output has root `dist/index.html`; JS is 33.82 kB raw / 12.05 kB gzip and CSS is 15.18 kB raw / 4.08 kB gzip.
+- `npm run test:e2e`: 31/31 passed.
+- `/opt/fleet/lib/verify-url.sh` passed locally and live: HTTP 200, title, `lang=en`, one h1, main landmark, image alt text, and no console/page errors. Playwright axe checks in the browser suite found no serious or critical issues.
+- Fresh live desktop and 390 px phone contexts began at scroll position 0 with the job (“Build a receipt for every family scan”), audience (family historians), and visible first action (“Try it with sample data”). The phone page had no horizontal overflow. Visual inspection confirmed both first screens.
+- The live 31/31 browser suite passed, including one-click sample data, persistent demo label, reset, real-data isolation, exports, offline reload, keyboard/focus, reduced motion, legal routes, 404, and the accessibility checks.
+- All 18 deployable build artifacts matched the live HTTPS origin by SHA-256.
+- Live license verification allowed requests 1–30 and returned request 31 as HTTP 429 with `Retry-After: 3`.
 
-Full evidence and reproduction: [`.factory/verification-5.md`](verification-5.md).
+## Deployment
+
+Deployed the verified static `dist/` through the existing `sf-scan-archive-receipt` static app. The durable Static Web Apps configuration in `public/staticwebapp.config.json` was retained. The live origin now serves `assets/index-D_445wqx.js`, which is the implementation build.
+
+## Known gaps and next steps
+
+No product defects remain from the recorded verification history. Checkout and license verification are live factory dependencies and were verified without making a purchase. Continue normal release monitoring; no further application change is required.
