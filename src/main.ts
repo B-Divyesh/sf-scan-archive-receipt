@@ -15,6 +15,7 @@ let hashing = false;
 let paid = false;
 let objectUrls: string[] = [];
 let saveQueue: Promise<void> = Promise.resolve();
+let queuedSaves = 0;
 let editRevision = 0;
 
 const returnedFromCheckout = demoMode ? false : captureLicense();
@@ -70,7 +71,14 @@ function persistEdit(): void {
   batch.updatedAt = new Date().toISOString();
   const snapshot = structuredClone(batch);
   const revision = ++editRevision;
-  saveQueue = saveQueue.catch(() => undefined).then(() => saveBatch(snapshot));
+  // Start the first IndexedDB write in this input event. Deferring it through
+  // a Promise continuation leaves an immediate reload a chance to cancel the
+  // write before IndexedDB has even opened.
+  const write = queuedSaves === 0
+    ? saveBatch(snapshot)
+    : saveQueue.catch(() => undefined).then(() => saveBatch(snapshot));
+  queuedSaves += 1;
+  saveQueue = write.finally(() => { queuedSaves -= 1; });
   void saveQueue.then(() => {
     if (revision === editRevision) announce('Changes saved on this device.');
   }).catch(() => {

@@ -1,0 +1,1 @@
+Build a local receipt for family scans with source notes, stable filenames, checksums, and free exports.

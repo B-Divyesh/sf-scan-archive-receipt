@@ -62,6 +62,8 @@ Run every visitor-facing claim test with:
 npm run test:e2e -- --grep @claim:
 ```
 
+Each declared claim command builds the production artifact before opening its demo route, so it also works directly after `npm ci`.
+
 The production command creates `dist/index.html`. The browser suite uses Playwright 1.58.2.
 
 To inspect the production build:
