@@ -36,3 +36,14 @@ Deployed the verified static `dist/` through the existing `sf-scan-archive-recei
 ## Known gaps and next steps
 
 No product defects remain from the recorded verification history. Checkout and license verification are live factory dependencies and were verified without making a purchase. Continue normal release monitoring; no further application change is required.
+
+## Independent verification 6
+
+- Verification report: `.factory/verification-6.md`
+- Implementation SHA reviewed: `591ddd7fcdb29c281edfc9c90888ad2dd14e2532`
+- Documentation baseline reviewed: `65f6793aefb04232ce02e2aca7298ec64507074c`
+- Result: **PASS** — zero findings and zero untested claims.
+
+Fresh-clone verification ran all 13 declared claim commands individually before a manual build; all passed. `npm test` passed 9/9, `npm run typecheck`, `npm run lint`, and `npm run build` passed, and local plus live browser suites passed 31/31. Live desktop and 390 px phone first screens, one-click isolated demo/reset, real-data isolation, accessibility, reduced motion, routes/legal pages/404, privacy, offline reload/update, artifact identity, checkout redirect, and rate limiting were checked.
+
+Live deployment matched 18/18 production artifacts. The license endpoint accepted 30 fresh invalid requests and returned 429 with Retry-After on request 31. Full evidence is in `.factory/verification-6.md` and copied to `/work/.evidence/qa-report.md`.
